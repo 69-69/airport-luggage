@@ -12,7 +12,7 @@ import {
     clearOutcomeError,
     clearOutcomeErrorString,
     emailRegex,
-    isNumeric,
+    isNumeric, manualAirlines,
     namePattern, OutcomeProps
 } from "@/utils/util";
 import {setOutcomeHelper} from "@/utils/validators";
@@ -54,7 +54,7 @@ const AddStaffDialog = ({
                 .map((a) => a.airlineName)
                 .filter((name): name is string => !!name?.trim());
 
-            setAirlines(all);
+            setAirlines([...all, ...manualAirlines]);
         } catch (e) {
             console.error("Error fetching staff rows:", e);
         }
