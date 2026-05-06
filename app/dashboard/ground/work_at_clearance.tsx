@@ -58,7 +58,10 @@ const WorkAtClearanceDashboard = ({user}: { user: AuthUser | null }) => {
             const flight = gateFlights[0];
             setFlight(flight);
 
-            const bags: Bag[] = bagService.getAllByTickets(flight.tickets)
+            /// Recent change [allTickets]
+            const allTickets = gateFlights.flatMap(f => f.tickets);
+
+            const bags: Bag[] = bagService.getAllByTickets(allTickets) // tickets: string[]
                 .filter((b) =>
                     b.location === BagLocationEnum.CHECKIN_COUNTER
                     || b.location === BagLocationEnum.SECURITY_CHECK
@@ -97,7 +100,7 @@ const WorkAtClearanceDashboard = ({user}: { user: AuthUser | null }) => {
                 rows={rows}
                 topButton={
                     <Typography variant="h6" component="h4" fontWeight="normal" align="left" gutterBottom>
-                        [ Bags Inspection: <b>Flight {flight?.flightNumber}</b> ]
+                        [ Bags Inspection: <b>{flight?.airlineName}</b> ]
                     </Typography>
                 }
                 onActionCallback={(row) => {

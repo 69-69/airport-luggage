@@ -9,9 +9,12 @@ import {Passenger} from "@/types/models";
 
 interface BoardDialogProps {
     open: boolean;
+    ticket: string | null;
+    fullName: string | null;
     onClose: () => void;
+    showConfirmation: () => void;
     passenger: Passenger | undefined;
-    onBoard: (ticketNumber: string) => void;
+    // onBoard: (ticketNumber: string) => void;
     outcome?: OutcomeProps; // the *current value* of the outcome
     setOutcome: React.Dispatch<React.SetStateAction<OutcomeProps | undefined>>;
 }
@@ -21,19 +24,28 @@ const _airlineName = (flight: string) => getAirlineByCode(stripAlphabets(flight)
 const BoardDialog = ({
                          open,
                          onClose,
-                         onBoard,
+                         ticket,
+                         fullName,
                          outcome,
                          setOutcome,
                          passenger,
+                         showConfirmation,
                      }: BoardDialogProps) => {
     const [ticketNumber, setTicketNumber] = React.useState('');
+
+    React.useEffect(() => {
+        if (open && ticket !== null) {
+            setTicketNumber(ticket ?? '');
+        }
+    }, [open, ticket]);
 
     const handleSubmit = () => {
         if (ticketNumber.length < 10) {
             return setOutcomeHelper('error', 'Enter a valid ticket number', setOutcome);
         }
+        showConfirmation();
         // setOutcomeHelper('success', 'Passenger boarded!', setOutcome); // If everything is valid, set success message
-        onBoard(ticketNumber);
+        // onBoard(ticketNumber);
         // onClose();
     };
 
@@ -48,13 +60,17 @@ const BoardDialog = ({
             confirmLabel='Board Passenger'
             content={
                 <>
-                    <TextField
+                    <span><b>About to Onboard</b>: {fullName} </span> with ticket {ticketNumber}
+
+                    {!ticket && (<TextField
                         label="Ticket Number"
                         type="text"
                         fullWidth
                         size="small"
                         value={ticketNumber}
                         helperText="Ticket number can be up to 10 digits"
+                        disabled={!!ticket}
+                        sx={{display: 'none'}}
                         onChange={clearOutcomeError(setTicketNumber, setOutcome)}
                         slotProps={{
                             input: {
@@ -62,7 +78,7 @@ const BoardDialog = ({
                                 inputProps: {minLength: 10, maxLength: 10}
                             },
                         }}
-                    />
+                    />)}
                     {outcome && outcome.status !== undefined && (
                         <Alert severity={outcome.status}>
                             {outcome.message}

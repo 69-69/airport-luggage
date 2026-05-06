@@ -8,23 +8,9 @@ import {RoleEnum} from "@/types/userRole";
 import {toSentenceCase} from "@/utils/util";
 
 const _KEY = "all_users";
+const userBaseApi = 'http://localhost:8080/api/users';
 
 export const userService = {
-    getAll(isLogin?: boolean): User[] {
-        const users: User[] = storageService.get<User[]>(_KEY, []);
-
-        // Ensure Admin exists
-        if (!users.some(u => u.role === (RoleEnum.ADMIN as UserRole))) {
-            const adminCopy = {...ADMIN_USER, password: hashPassword(ADMIN_USER.password)};
-            users.push(adminCopy);
-            storageService.set(_KEY, users);
-        }
-
-        if(isLogin) return users;
-
-        // Remove the admin user from the list
-        return users.filter(u => u.role !== (RoleEnum.ADMIN as UserRole));
-    },
 
     add(user: Omit<User, "firstLogin">): User {
         const users = this.getAll();
@@ -52,8 +38,24 @@ export const userService = {
         return newUser;
     },
 
+    getAll(isLogin?: boolean): User[] {
+        const users: User[] = storageService.get<User[]>(_KEY, []);
+
+        // Ensure Admin exists
+        if (!users.some(u => u.role === (RoleEnum.ADMIN as UserRole))) {
+            const adminCopy = {...ADMIN_USER, password: hashPassword(ADMIN_USER.password)};
+            users.push(adminCopy);
+            storageService.set(_KEY, users);
+        }
+
+        if (isLogin) return users;
+
+        // Remove the admin user from the list
+        return users.filter(u => u.role !== (RoleEnum.ADMIN as UserRole));
+    },
+
     remove(phone: string) {
-        if (phone === "admin") {
+        if (phone === "9487642142") {
             throw new Error("Cannot remove hardcoded Admin");
         }
 
@@ -88,6 +90,90 @@ export const userService = {
 
         users[idx].firstLogin = false;
         storageService.set(_KEY, users);
+    },
+
+    /// REMOTE API CALLS:
+    async removeRemote(phone: string): Promise<void> {
+        const response = await fetch(userBaseApi + "/" + phone, {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'},
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err?.message ?? 'Failed to remove user');
+        }
+    },
+
+    async getAllRemote(isLogin?: boolean): Promise<User[]> {
+        const response = await fetch(userBaseApi, {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json'},
+        });
+
+        if (!response.ok) {
+            const err = await response.text();
+            throw new Error(`Failed to fetch users: ${err}`);
+        }
+
+        const users: User[] = await response.json();
+
+        // Optionally filter out admin for non-login view
+        if (!isLogin) {
+            return users.filter(u => u.role !== RoleEnum.ADMIN);
+        }
+
+        return users;
+    },
+
+    async findRemote(username: string): Promise<User> {
+        const response = await fetch(`${userBaseApi}/${username}`, {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json'},
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err?.message ?? 'Failed to find user');
+        }
+
+        return await response.json();
+    },
+
+    async addRemote(user: Omit<User, "firstLogin">): Promise<User> {
+        // Ensure password is hashed locally if needed
+        // const hashedPassword = hashPassword(user.password);
+
+        const response = await fetch(userBaseApi + '/register', {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                ...user,
+                password: user.password,
+            }),
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err?.message ?? "Failed to create user on server");
+        }
+
+        return await response.json();
+    },
+
+    async updatePasswordRemote(username: string, newPassword: string, firstLogin = false): Promise<void> {
+        const response = await fetch(`${userBaseApi}/${username}/password`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({newPassword, firstLogin}),
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err?.message ?? 'Failed to update password');
+        }
     },
 
     async sendEmail(user: Omit<User, "firstLogin" | "phone">): Promise<SendResult> {
@@ -132,5 +218,6 @@ export const userService = {
                 error: err instanceof Error ? err.message : "Email service error",
             };
         }
-    }
+    },
+
 };

@@ -13,11 +13,15 @@ interface ConfirmFlightDialogProps {
     errored?: string;
     message: React.ReactNode;
     dataId: number | string;
+    cancelLabel?: string;
+    confirmLabel?: string;
+    optionLabel?: string;
     onConfirm: (proceed: boolean) => void;
+    onOption?: () => void | Promise<void>;
 }
 
 const ConfirmEntityDialog = (
-    {open, onClose, title, errored, message, dataId, onConfirm}: ConfirmFlightDialogProps
+    {open, onClose, title, errored, message, dataId, onConfirm,onOption, cancelLabel, confirmLabel,optionLabel}: ConfirmFlightDialogProps
 ) => {
     // const {open, onClose, flightId} = params;
 
@@ -38,6 +42,10 @@ const ConfirmEntityDialog = (
             open={open}
             onCancel={onClose}
             title={title}
+            confirmLabel={confirmLabel}
+            cancelLabel={cancelLabel}
+            optionLabel={optionLabel}
+            onOption={onOption}
             onConfirm={handleConfirm}
             content={
                 <>

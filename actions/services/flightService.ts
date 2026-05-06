@@ -1,9 +1,10 @@
 // actions/services/flightService.ts
 
 import storageService from "@/actions/services/storageService";
-import {Flight} from "@/types/models";
+import {Flight, FlightStatusEnum} from "@/types/models";
 
 const _KEY = "all_flights";
+const flightBaseApi = 'http://localhost:8080/api/flights';
 
 export const flightService = {
     getAll(): Flight[] {
@@ -51,6 +52,7 @@ export const flightService = {
 
         const newFlight: Flight = {
             ...flight,
+            status: FlightStatusEnum.SCHEDULED,
             tickets: []
         };
         flights.push(newFlight);
@@ -100,17 +102,30 @@ export const flightService = {
         storageService.set(_KEY, flights);
     },
 
-    remove(flightNumber: string) {
+    updateStatus(flightNumber: string, status?: FlightStatusEnum): void {
+        const {flights, idx} = this.find(flightNumber);
+
+        if (idx === -1) throw new Error("Flight not found");
+
+        // Update Status as Departed
+        flights[idx].status = status ?? FlightStatusEnum.DEPARTED;
+
+        storageService.set(_KEY, flights);
+    },
+
+    async remove(flightNumber: string) {
         const flights = this.getAll();
 
-        if (flights.some((f) => f.tickets.length > 0)) {
+        if (flights.some((f) => f.tickets.length > 0 && f.status !== FlightStatusEnum.SCHEDULED)) {
             throw new Error(
-                `Cannot remove Flight ${flightNumber}: it currently has assigned passengers. ` +
+                `Cannot remove Flight ${flightNumber}: its currently has assigned passengers and is ${FlightStatusEnum.SCHEDULED.toString()}. ` +
                 `Please reassign all passengers to other flights before proceeding.`
             );
         }
 
         storageService.set(_KEY, flights.filter((f) => f.flightNumber !== flightNumber));
+        //
+        await flightService.removeRemote(flightNumber);
     },
 
     removeTicket(flightNumber: string, ticket: string): void {
@@ -128,20 +143,171 @@ export const flightService = {
         }
 
         storageService.set(_KEY, flights);
-    }
+    },
 
-   /*assignFlight({flightNumber, ticket}: { flightNumber: string, ticket: string }): void {
-        const {flights, idx} = this.find(flightNumber);
+    /// Remote API Calls:
 
-        if (idx === -1) throw new Error("Flight not found");
+    async addRemote(flight: Omit<Flight, "tickets" | "flightId">): Promise<Flight> {
 
-        if (flights[idx].tickets.indexOf(ticket) > -1) {
-            throw new Error(`Ticket ${ticket} already assign to flight ${flightNumber}`);
+        const response = await fetch(flightBaseApi + "/add", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({...flight, flightCode: flight.flightNumber})
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            console.error("Failed to create flight", err.message);
+            throw new Error(err?.message ?? "Failed to create flight");
         }
 
-        // Add new ticket
-        flights[idx].tickets.push(ticket);
+        return await response.json();
+    },
 
-        storageService.set(_KEY, flights);
-    },*/
+    async changeGateRemote(
+        flightNumber: string,
+        {gate, terminal}: { gate: string, terminal: string }
+    ): Promise<Flight> {
+
+        const response = await fetch(
+            `${flightBaseApi}/change-gate/${flightNumber}`,
+            {
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({gate, terminal})
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to update gate");
+        }
+
+        return await response.json();
+    },
+
+    async addTicketRemote(
+        flightNumber: string,
+        ticket: string
+    ): Promise<void> {
+
+        const response = await fetch(
+            `${flightBaseApi}/${flightNumber}/tickets`,
+            {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ticket})
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to add ticket");
+        }
+    },
+
+    async updateStatusRemote(flightNumber: string, status?: FlightStatusEnum): Promise<void> {
+        const flightStatus = status ?? FlightStatusEnum.DEPARTED;
+
+        const response = await fetch(
+            `${flightBaseApi}/update-status/${flightNumber}/${flightStatus}`,
+            {method: "PUT"}
+        );
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err?.message ?? `Failed to update flight ${flightNumber} Status`);
+        }
+    },
+
+    async removeRemote(flightNumber: string): Promise<void> {
+
+        const response = await fetch(
+            `${flightBaseApi}/${flightNumber}`,
+            {method: "DELETE"}
+        );
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err?.message ?? "Failed to delete flight");
+        }
+    },
+
+    async removeTicketRemote(
+        flightNumber: string,
+        ticket: string
+    ): Promise<void> {
+
+        const response = await fetch(
+            `${flightBaseApi}/${flightNumber}/tickets/${ticket}`,
+            {method: "DELETE"}
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to remove ticket");
+        }
+    },
+
+    async getAllRemote(): Promise<Flight[]> {
+        const response = await fetch(flightBaseApi);
+
+        if (!response.ok) {
+            const err = await response.text();
+            throw new Error(err || "Failed to fetch flights");
+        }
+
+        return await response.json();
+    },
+
+    async findByAirlineCodeAndGateRemote(
+        airlineCode: string,
+        gateNumber: string
+    ): Promise<Flight | undefined> {
+
+        const response = await fetch(
+            `${flightBaseApi}/search?airlineCode=${airlineCode}&gate=${gateNumber}`
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to search flight");
+        }
+
+        return await response.json();
+    },
+
+    async getAllByFlightNumbersRemote(
+        flightNumbers: string[]
+    ): Promise<Flight[]> {
+
+        const response = await fetch(
+            `${flightBaseApi}/batch`,
+            {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(flightNumbers)
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch flights");
+        }
+
+        return await response.json();
+    }
+
+
+    /*assignFlight({flightNumber, ticket}: { flightNumber: string, ticket: string }): void {
+         const {flights, idx} = this.find(flightNumber);
+
+         if (idx === -1) throw new Error("Flight not found");
+
+         if (flights[idx].tickets.indexOf(ticket) > -1) {
+             throw new Error(`Ticket ${ticket} already assign to flight ${flightNumber}`);
+         }
+
+         // Add new ticket
+         flights[idx].tickets.push(ticket);
+
+         storageService.set(_KEY, flights);
+     },*/
 }

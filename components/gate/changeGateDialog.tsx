@@ -9,8 +9,7 @@ import UiDialog from "@/components/uiDialog";
 import {DataRow} from "@/types/dataRow";
 import {AutocompleteDropdown} from "@/components/dropdown";
 import {
-    clearErrorAndSetString,
-    clearOutcomeError, clearOutcomeErrorString,
+     clearOutcomeErrorString,
     manualGates,
     manualTerminals,
     OutcomeProps,

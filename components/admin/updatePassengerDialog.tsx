@@ -57,6 +57,7 @@ const AssignFlightToDialog = ({
 
         try {
             passengerService.changePassengerFlight(ticketNumber, flightNumber);
+            await passengerService.changePassengerFlightRemote(ticketNumber, flightNumber);
 
             /*passengerService.updateFlight(ticketNumber, flightNumber);
             flightService.assignFlight({
@@ -99,7 +100,7 @@ const AssignFlightToDialog = ({
             onConfirm={handleSubmit}
             cancelLabel={'Cancel'}
             confirmDisabled={!flightNumber || !ticketNumber}
-            confirmLabel={'Add'}
+            confirmLabel={'Save Changes'}
             content={
                 <>
                     <AutocompleteDropdown

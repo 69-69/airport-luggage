@@ -46,7 +46,10 @@ const ClearanceBags = ({user}: { user: AuthUser | null }) => {
 
             const flight = gateFlights[0];
 
-            const bags: Bag[] = bagService.getAllByTickets(flight.tickets)
+            /// Recent change [allTickets]
+            const allTickets = gateFlights.flatMap(f => f.tickets);
+
+            const bags: Bag[] = bagService.getAllByTickets(allTickets)
                 .filter((b) =>
                     b.location === BagLocationEnum.LOADED ||
                     b.location === BagLocationEnum.GATE

@@ -24,7 +24,7 @@ const StaffLoginForm = () => {
         const [showWorkPref, setWorkPref] = useState(false);
         const [showChangePassword, setShowChangePassword] = useState(false);
 
-        const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+        const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
             e.preventDefault();// redirect after login
 
             if (username.length < 4) {
@@ -41,6 +41,9 @@ const StaffLoginForm = () => {
 
             // Call authService
             const result = authService.login(username, password);
+            if(username!=='admin') {
+                await authService.loginRemote(username, password);
+            }
 
             if (!result.success) {
                 setError(result.error);
@@ -72,11 +75,12 @@ const StaffLoginForm = () => {
             router.push(redirectPath)
         };
 
-        const handleChangePassword = (newPassword: string) => {
+        const handleChangePassword = async (newPassword: string) => {
             if (!user) return; // safety check
 
             // Update user password in your localStorage backend
             userService.updatePassword(user.username, newPassword, false);
+            await userService.updatePasswordRemote(user.username, newPassword, false);
 
             setShowChangePassword(false); // Close Change Password Dialog
 

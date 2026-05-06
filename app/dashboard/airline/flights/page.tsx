@@ -29,10 +29,11 @@ const columns = ["flight", "gate", "tickets", "terminal", "destination", "depart
 
 const AirlineFlightsTable = () => {
     const {user, loading} = useAuth();
-    if (loading) return <FullScreenLoader/>
 
     const router = useRouter();
     const [flightRows, setFlightRows] = React.useState<Flight[]>([]);
+
+    if (loading) return <FullScreenLoader/>
 
     // Fetch Flight list
     const fetchFlights = () => {

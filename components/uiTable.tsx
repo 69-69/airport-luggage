@@ -25,6 +25,7 @@ interface TableProps<T extends DataRow> {
     rows: T[];
     onActionCallback?: (row: T) => void;
     onStatusCallback?: (row: T) => void;
+    onOptCallback?: (row: T) => void;
     align?: "left" | "center" | "right";
 }
 
@@ -62,6 +63,7 @@ const UITable = <T extends DataRow>({
                                         topButton,
                                         topAlignment,
                                         onActionCallback,
+                                        onOptCallback,
                                         onStatusCallback
                                     }: TableProps<T>) => {
     const tableAlign = align ?? "center";
@@ -112,10 +114,12 @@ const UITable = <T extends DataRow>({
 
                                         {columns.map((col) => (
                                             <TableCell key={col} align={tableAlign}>
-                                                {col === "action" ? (
+                                                {col === "action" || col === "manage" ? (
                                                     getButton<T>(i, row[col] as string, row, false, onActionCallback)
                                                 ) : col === "status" || col === "update" ? (
                                                     getButton<T>(i, row[col] as string, row, col === "status", onStatusCallback)
+                                                ) : col === "view" ? (
+                                                    getButton<T>(i, row[col] as string, row, true, onOptCallback !== null ? onOptCallback : onStatusCallback)
                                                 ) : (
                                                     row[toCamelCase(col)]
                                                 )}

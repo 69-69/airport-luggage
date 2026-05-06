@@ -32,6 +32,7 @@ const menuItemsByRole: Record<UserRole, { label: string; path: string }[]> = {
     GATE: [ // Gate Staff
         {label: 'Dashboard', path: '/dashboard/gate'},
         {label: 'Onboard Manifest', path: '/dashboard/gate/onboard/'},
+        {label: 'Gate Info', path: '/dashboard/gate/info'},
         {label: 'Message Board', path: '/dashboard/messages'},
     ],
     GROUND: [ // Ground Staff

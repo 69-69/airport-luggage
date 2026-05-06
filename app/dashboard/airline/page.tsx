@@ -2,7 +2,7 @@
 
 import React, {useEffect} from "react";
 import UITable from "@/components/uiTable";
-import {Alert, Box, Button, Grid, Typography} from "@mui/material";
+import {Alert, Grid, Typography} from "@mui/material";
 import {DataRow} from "@/types/dataRow";
 import {useRouter} from "next/navigation";
 import {Flight, Passenger} from "@/types/models";
@@ -10,12 +10,9 @@ import {flightService} from "@/actions/services/flightService";
 import {passengerService} from "@/actions/services/passengerService";
 import {useAuth} from "@/actions/authContext";
 import FullScreenLoader from "@/components/fullScreenLoader";
-import CheckInDialog from "@/components/airline/checkInDialog";
-import VerifyPassengerDialog from "@/components/airline/passengerVerificationDialog";
 import {RoleEnum} from "@/types/userRole";
 import RoleGuard from "@/actions/roleGuard";
 import PageTitleUpdater from "@/components/pageTitleUpdater";
-import {toTitleCase} from "@/utils/util";
 import {formatTime} from "@/utils/validators";
 
 interface FlightRow extends DataRow {
@@ -30,16 +27,16 @@ const columns = ["flight", "terminal", "gate", "passengers", "departure", "actio
 
 const AirlineStaffDashboard = () => {
     const {user, loading} = useAuth();
-    if (loading) return <FullScreenLoader/>
 
     const router = useRouter();
-    const [checkinData, setCheckinData] = React.useState<[string, string]>(['', '']);
-    const [isOpenCheckIn, setOpenCheckIn] = React.useState(false);
-    const [openVerify, setOpenVerify] = React.useState(false);
+    // const [checkinData, setCheckinData] = React.useState<[string, string]>(['', '']);
+    // const [isOpenCheckIn, setOpenCheckIn] = React.useState(false);
+    // const [openVerify, setOpenVerify] = React.useState<[boolean, FlightRow | null]>([false, null]);
     const [flightRows, setFlightRows] = React.useState<Flight[]>([]);
-    const counts: Record<string, number> = {};
+    // const counts: Record<string, number> = {};
     const [passengerCounts, setPassengerCounts] = React.useState<Record<string, number>>({});
 
+    if (loading) return <FullScreenLoader/>
 
     // Fetch Flight list
     const fetchFlights = () => {
@@ -102,6 +99,7 @@ const AirlineStaffDashboard = () => {
                         title={user?.airline + " Counter"}
                         name={user?.lastName}
                         topAlignment='center'
+                        // onStatusCallback={(row: FlightRow) => setOpenVerify([true, row])}
                         onActionCallback={(row: FlightRow) => router.push(`/dashboard/airline/${row.flight}`)}
                         topButton={
                             <Grid container rowSpacing={1} columnSpacing={{xs: 1, sm: 2, md: 3}} sx={{
@@ -115,7 +113,7 @@ const AirlineStaffDashboard = () => {
                                 </Grid>
 
                                 {/* System Overview */}
-                                <Grid size={{xs: 12, md: 4}}>
+                                {/*<Grid size={{xs: 12, md: 4}}>
                                     <Button
                                         variant="outlined"
                                         size="large"
@@ -128,7 +126,7 @@ const AirlineStaffDashboard = () => {
                                     >
                                         Check-In
                                     </Button>
-                                </Grid>
+                                </Grid>*/}
                             </Grid>
                         }
                     />
@@ -137,23 +135,25 @@ const AirlineStaffDashboard = () => {
                         No flights available.
                     </Alert>
                 )}
-                {/*Very Passenger Dialog: Before checking-in*/}
+                {/*Very Passenger Dialog: Before checking-in
                 {openVerify && (<VerifyPassengerDialog
-                    open={openVerify}
-                    onClose={() => setOpenVerify(false)}
+                    open={openVerify[0]}
+                    ticket={openVerify[1]?.flight ?? ''}
+                    idNo={openVerify[1]?.flight ?? ''}
+                    onClose={() => setOpenVerify([false, null])}
                     onProceedToCheckIn={(ticket, flight) => {
                         setCheckinData([ticket, flight]);
                         setOpenCheckIn(true);
                     }}
                 />)}
 
-                {/*Check-In Dialog*/}
+                Check-In Dialog
                 {isOpenCheckIn && (<CheckInDialog
                     open={isOpenCheckIn}
                     ticket={checkinData[0]}
                     flight={checkinData[1]}
                     onClose={() => setOpenCheckIn(false)}
-                />)}
+                />)}*/}
         </RoleGuard>
     );
 }

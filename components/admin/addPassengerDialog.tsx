@@ -56,7 +56,7 @@ const AddPassengerDialog = ({
         }
     }, [open]); // re-run whenever the dialog is opened
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
 
         if (!namePattern.test(firstName)) {
             return setOutcomeHelper('error', 'Enter a valid first name', setOutcome);
@@ -83,7 +83,7 @@ const AddPassengerDialog = ({
 
         setOutcomeHelper('success', 'Passenger added successfully!', setOutcome); // If everything is valid, set success message
 
-        const result: SendResult = addPassenger({
+        const result: SendResult = await addPassenger({
             firstName: firstName,
             lastName: lastName,
             idNumber: idNumber,

@@ -25,14 +25,15 @@ interface GateFlightRow extends DataRow {
     flight: string;
     terminal: string;
     gate: string;
-    destination: string;
-    departure: string;
-    passengers: number;
-    update: string;
-    action: string;
+    airline: string;
+    // destination: string;
+    // departure: string;
+    // passengers: number;
+    // update: string;
+    // action: string;
 }
 
-const columns = ["flight", "terminal", "gate", "destination", "departure", "passengers", "update","action"];
+const columns = ["gate", "terminal", "airline", "flight"/*, "destination", "departure", "passengers", "update","action"*/];
 
 
 const GateStaffDashboard = () => {
@@ -158,70 +159,23 @@ const GateStaffDashboard = () => {
             <PageTitleUpdater/>
 
             <UITable<GateFlightRow>
-                title='Gate Staff Dashboard'
+                title='Gate Information'
                 name={toTitleCase(user?.lastName ?? 'Staff') + (user?.workMode ? ' at GATE: ' + user.workMode : '')}
                 columns={columns}
                 topAlignment='justify'
                 rows={(Array.isArray(flightRows) ? flightRows : []).map((f: Flight) => (
                     {
-                        flight: f.flightNumber,
                         gate: f.gate,
                         terminal: f.terminal,
-                        destination: toTitleCase(f.destination),
-                        departure: formatTime(f.departureTime),
-                        passengers: f.tickets.length ?? 0,
-                        update: "Board Passenger",
-                        action: "Change Gate",
+                        airline: f.airlineName,
+                        flight: f.flightNumber,
+                        // destination: toTitleCase(f.destination),
+                        // departure: formatTime(f.departureTime),
+                        // passengers: f.tickets.length ?? 0,
+                        // update: "Board Passenger",
+                        // action: "Change Gate",
                     }
                 )) as GateFlightRow[]}
-                topButton={
-                    flightRows.length > 0 ? (
-                        <Container sx={{justifyContent: "space-between", mr: 0, pr: 0}}>
-                            {/* Buttons */}
-                            <Grid container rowSpacing={2} columnSpacing={{xs: 1, sm: 2, md: 2}} sx={{
-                                justifyContent: "end"
-                            }}>
-                                {/*<Grid size={{xs: 12, md: 3}}>
-                                    <Button
-                                        variant="outlined"
-                                        size="large"
-                                        sx={{
-                                            textTransform: 'none',
-                                            '&': {boxShadow: 3},
-                                        }}
-                                        onClick={() => {
-                                            setShowBoard(true);
-                                            setOutcome(undefined);
-                                        }}
-                                    >
-                                        Board Passenger
-                                    </Button>
-                                </Grid>*/}
-                                <Grid size={{xs: 12, md: 3}}>
-                                    <Button
-                                        variant="outlined"
-                                        size="large"
-                                        sx={{
-                                            textTransform: 'none',
-                                            '&': {boxShadow: 3},
-                                        }}
-                                        onClick={() => {
-                                            setConfirmDeparture(true);
-                                            setOutcome(undefined);
-                                        }}
-                                    >
-                                        Confirm Departure
-                                    </Button>
-                                </Grid>
-                            </Grid>
-
-                            {/* Quick Actions */}
-                            <Typography variant="h6" component="h4" fontWeight='normal' gutterBottom>
-                                [ Flights at Gate <b>{user?.workMode}</b> ]
-                            </Typography>
-                        </Container>
-                    ) : null
-                }
                 onStatusCallback={(row: GateFlightRow) => {router.push(`/dashboard/gate/onboard?board_passenger=true`)}}
                 onActionCallback={(row: GateFlightRow) => {
                     console.log('Set Change Gate', row.flight);

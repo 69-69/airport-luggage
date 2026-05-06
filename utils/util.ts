@@ -115,14 +115,17 @@ const getAirlineByCode = (code: string): string | undefined => {
 }
 
 const manualAirlines: string[] = [
+    "AA - American Airlines",
+    "DL - Delta Airlines",
+    "UA - United Airlines",
+    "FA - Frontier Airlines",
+    "SW - Southwest Airlines",
     "AC - Air Canada",
     "AF - Air France",
     "NH - All Nippon Airways",
-    "AA - American Airlines",
     "AZ - ITA Airways",
     "BA - British Airways",
     "CX - Cathay Pacific",
-    "DL - Delta Air Lines",
     "EK - Emirates",
     "GA - Ghana Airways",
     "IB - Iberia",
@@ -133,9 +136,7 @@ const manualAirlines: string[] = [
     "QF - Qantas",
     "SA - South African Airways",
     "SQ - Singapore Airlines",
-    "SW - Southwest Airlines",
-    "TK - Turkish Airlines",
-    "UA - United Airlines"
+    "TK - Turkish Airlines"
 ];
 
 const namePattern = /^[a-zA-Z\s'-]+$/;
@@ -145,11 +146,38 @@ const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/;
 
 // generate Gates: G1, G2, etc
-const manualGates: string[] = Array.from({length: 100}, (_, i) => `G${i + 1}`);
-
+// const manualGates: string[] = Array.from({length: 100}, (_, i) => `G${i + 1}`);
+const manualGates: string[] = [
+    "C24",
+    "A38",
+    "A23",
+    "D01",
+    "C19",
+    "A19",
+    "A20",
+    "C22",
+    "E13",
+    "E14",
+    "E17",
+    "E12",
+    "E11",
+    "E08",
+    "E06",
+    "E09",
+    "E05",
+    "E02",
+    "E04",
+    "E10",
+    "F18",
+    "F12",
+    "F09",
+    "F11",
+    "F02",
+];
 
 // generate Gates: T1, T2, etc
-const manualTerminals: string[] = Array.from({length: 100}, (_, i) => `T${i + 1}`);
+// const manualTerminals: string[] = Array.from({length: 100}, (_, i) => `T${i + 1}`);
+const manualTerminals: string[] = ["C1", "A1", "D1", "E1", "E 1", "F1"];
 
 // generate Counters: C1, C2, etc
 const manualCounters: string[] = Array.from({length: 100}, (_, i) => `C${i + 1}`);

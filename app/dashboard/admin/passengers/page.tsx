@@ -15,23 +15,28 @@ import PageTitleUpdater from "@/components/pageTitleUpdater";
 import RoleGuard from "@/actions/roleGuard";
 import {flightService} from "@/actions/services/flightService";
 import AssignFlightToDialog from "@/components/admin/updatePassengerDialog";
+import {useRouter} from "next/navigation";
+import PassengerBagsDialog from "@/components/admin/passengerBags";
 
 interface PassengerRow extends DataRow {
     name: string;
+    id: string;
     flight: string;
     ticket: string;
     status: string;
     bags: number;
+    view: string;
     update: string;
     action: string;
 }
 
-const columns = ["name", "ticket", "flight", "status", "bags", "update", "action"];
+const columns = ["name", "id", "ticket", "flight", "status", "bags", "view", "update", "action"];
 
 const Passengers = () => {
-
+    // const router = useRouter();
     const [error, setError] = React.useState('');
     const [isConfirm, setConfirm] = useState(false);
+    const [isShowBags, setShowBags] = useState(false);
     const [selectedRow, setSelectedRow] = useState<DataRow>();
     const [isAdd, setIsAdd] = useState(false);
     const [showUpdate, setShowUpdate] = useState(false);
@@ -52,7 +57,7 @@ const Passengers = () => {
     // Initial fetch
     useEffect(() => fetchPassengers(), []);
 
-    const handleOnRemove = (proceed: boolean) => {
+    const handleOnRemove = async (proceed: boolean) => {
         if (!proceed || !selectedRow?.ticket) return;
 
         try {
@@ -64,7 +69,8 @@ const Passengers = () => {
 
             // Then delete dependent data
             passengerService.remove(ticket);
-            bagService.remove(ticket);
+            bagService.removeAll(ticket);
+            await passengerService.removeRemote(ticket);
 
             fetchPassengers();
             setConfirm(false);
@@ -85,10 +91,12 @@ const Passengers = () => {
                 columns={columns}
                 rows={(Array.isArray(passengerRows) ? passengerRows : []).map(p => ({
                     name: toTitleCase(`${p.firstName} ${p.lastName}`),
+                    id: p.idNumber,
                     flight: p.flightNumber,
                     ticket: p.ticketNumber,
                     status: p.status,
                     bags: bagService.getBagsByTicket(p.ticketNumber),
+                    view: "See bags",
                     update: "Update",
                     action: "Remove",
                 }))}
@@ -110,6 +118,11 @@ const Passengers = () => {
                     setSelectedRow(row);
                     setConfirm(true);
                 }}
+                onOptCallback={(row: PassengerRow) =>{
+                    setSelectedRow(row);
+                    setShowBags(true);
+                }}
+
                 onStatusCallback={(row: PassengerRow) => {
                     console.log('row-all', row);
                     setSelectedRow(row);
@@ -146,6 +159,14 @@ const Passengers = () => {
                 // setOutcome={setOutcome}
                 // onAddPassenger={handleAddPassenger}
             />
+
+            {/*PassengerBags Dialog*/}
+            {isShowBags && (<PassengerBagsDialog
+                open={isShowBags}
+                ticket={selectedRow?.ticket as string}
+                fullname={selectedRow?.name as string}
+                onClose={() => setShowBags(false)}
+            />)}
         </RoleGuard>
     );
 }

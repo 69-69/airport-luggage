@@ -1,10 +1,11 @@
 // actions/services/passengerService.ts
 
 import storageService from "@/actions/services/storageService";
-import {AuthResult, FlightSnapshot, Passenger, PassengerStatusEnum} from "@/types/models";
+import {AuthResult, FlightSnapshot, FlightStatusEnum, Passenger, PassengerStatusEnum} from "@/types/models";
 import {flightService} from "@/actions/services/flightService";
 
 const _KEY = "all_passengers";
+const passengerBaseApi = 'http://localhost:8080/api/passengers';
 
 export const passengerService = {
     getAll(): Passenger[] {
@@ -13,6 +14,10 @@ export const passengerService = {
 
     add(passenger: Omit<Passenger, "status">): Passenger {
         const passengers: Passenger[] = this.getAll();
+
+        if (passengers.some(p => p.idNumber === passenger.idNumber)) {
+            throw new Error(`Passenger with ID ${passenger.idNumber} already exists`);
+        }
 
         if (passengers.some(p => p.ticketNumber === passenger.ticketNumber)) {
             throw new Error(`Passenger with ticket ${passenger.ticketNumber} already exists`);
@@ -84,12 +89,6 @@ export const passengerService = {
         return passengers.filter((p: Passenger) => p.flightNumber === flightNumber);
     },
 
-    /*findByTicketNumber(ticketNumber: string): Passenger | undefined {
-        const passengers: Passenger[] = this.getAll();
-
-        return passengers.find((p: Passenger) => p.ticketNumber === ticketNumber);
-    },*/
-
     login(ticketNumber: string, idNumber: string): AuthResult {
         try {
             const passenger = this.findByTicketAndIdNumber(ticketNumber, idNumber);
@@ -110,26 +109,6 @@ export const passengerService = {
             return {success: false, error: (err as Error).message};
         }
     },
-
-    /*updateStatus(ticketNumber: string, status: PassengerStatus): void {
-        const passengers = this.getAll();
-        const p = passengers.find(p => p.ticketNumber === ticketNumber);
-
-        if (!p) throw new Error("Passenger not found");
-
-        p.status = status;
-        storageService.set(_KEY, passengers);
-    },
-
-    updateFlight(ticketNumber: string, flightNumber: string): void {
-        const passengers = this.getAll();
-        const p = passengers.find(p => p.ticketNumber === ticketNumber);
-
-        if (!p) throw new Error("Passenger not found");
-
-        p.flightNumber = flightNumber;
-        storageService.set(_KEY, passengers);
-    },*/
 
     changePassengerFlight(ticket: string, newFlightNumber: string): void {
         const passengers = this.getAll();
@@ -182,12 +161,16 @@ export const passengerService = {
         const passengers = this.getAll();
         const p = passengers.find(p => p.ticketNumber === ticketNumber);
 
+        if (p?.status === PassengerStatusEnum.BOARDED) {
+            throw new Error("Passenger already onboard");
+        }
         if (p?.status !== PassengerStatusEnum.CHECKED_IN) {
-            throw new Error("Passenger must be checked in");
+            throw new Error("Passenger must be checked in to proceed");
         }
 
         p.status = PassengerStatusEnum.BOARDED;
         storageService.set(_KEY, passengers);
+        flightService.updateStatus(p.flightNumber, FlightStatusEnum.BOARDING);
 
         return p;
     },
@@ -198,7 +181,132 @@ export const passengerService = {
             this.getAll().filter(u => u.ticketNumber !== ticketNumber)
         );
     },
+
+    /// Remote API Calls:
+
+    async addRemote(passenger: Omit<Passenger, "status" | "role">): Promise<Passenger> {
+        const response = await fetch(passengerBaseApi + "/add", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                ...passenger,
+                flightCode: passenger.flightNumber,
+                status: PassengerStatusEnum.NOT_CHECKED_IN
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err?.message ?? "Failed to create passenger");
+        }
+
+        return await response.json();
+    },
+
+    async loginRemote(ticketNumber: string, idNumber: string): Promise<AuthResult> {
+        const response = await fetch(passengerBaseApi + "/ticket/id", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ticketNumber, idNumber})
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {success: false, error: data?.message ?? "Login failed"};
+        }
+
+        return data;
+    },
+
+    async changePassengerFlightRemote(ticket: string, newFlightNumber: string): Promise<void> {
+        const response = await fetch(passengerBaseApi + `/change-flight/${ticket}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({flightCode: newFlightNumber})
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err?.message ?? "Failed to change passenger flight");
+        }
+    },
+
+    async checkInRemote(ticketNumber: string): Promise<void> {
+        const response = await fetch(passengerBaseApi + "/updateStatus/no", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ticketNumber})
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err?.message ?? "Check-in failed");
+        }
+    },
+
+    async boardRemote(ticketNumber: string): Promise<Passenger> {
+        const response = await fetch(passengerBaseApi + "/updateStatus/yes", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ticketNumber})
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err?.message ?? "Boarding failed");
+        }
+
+        return await response.json();
+    },
+
+    async removeRemote(ticketNumber: string): Promise<void> {
+        const response = await fetch(passengerBaseApi + "/byTicket/" + ticketNumber, {
+            method: "DELETE"
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err?.message ?? "Failed to remove passenger");
+        }
+    }
 };
+
+/*findByTicketNumber(ticketNumber: string): Passenger | undefined {
+    const passengers: Passenger[] = this.getAll();
+
+    return passengers.find((p: Passenger) => p.ticketNumber === ticketNumber);
+},*/
+
+/*updateStatus(ticketNumber: string, status: PassengerStatus): void {
+    const passengers = this.getAll();
+    const p = passengers.find(p => p.ticketNumber === ticketNumber);
+
+    if (!p) throw new Error("Passenger not found");
+
+    p.status = status;
+    storageService.set(_KEY, passengers);
+},
+
+updateFlight(ticketNumber: string, flightNumber: string): void {
+    const passengers = this.getAll();
+    const p = passengers.find(p => p.ticketNumber === ticketNumber);
+
+    if (!p) throw new Error("Passenger not found");
+
+    p.flightNumber = flightNumber;
+    storageService.set(_KEY, passengers);
+},*/
 
 /* USAGE: updateStatus
 try {

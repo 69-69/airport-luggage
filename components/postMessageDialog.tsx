@@ -19,6 +19,7 @@ import {useAuth} from "@/actions/authContext";
 interface PostDialogProps {
     // role?: UserRole;
     open: boolean;
+    msg?: string;
     isSecurityViolation?: boolean;
     onClose: () => void;
     outcome?: OutcomeProps; // the *current value* of the outcome
@@ -33,6 +34,7 @@ const MessageDialog = ({
                            onClose,
                            onPost,
                            outcome,
+                           msg,
                            setOutcome,
                        }: PostDialogProps) => {
     const {user} = useAuth();
@@ -59,6 +61,7 @@ const MessageDialog = ({
     useEffect(() => {
         if (open) {
             fetchFlights();
+            setMessage(msg ?? '');
         }
     }, [open]); // re-run whenever the dialog is opened
 
@@ -74,14 +77,15 @@ const MessageDialog = ({
         // If everything is valid, set success message
         setOutcomeHelper('success', 'Message sent successfully!', setOutcome);
 
-        let who = isAdmin || isSecurityViolation;
+        const who = isAdmin || isSecurityViolation;
         onPost({
             message,
             // Admin specifies 'Recipient'; but other staffs messages are auto-assign
             to: who ? to : user?.role,
             fromRole: user?.role,
             // Admin specifies 'airlineName'; but other staffs messages are auto-assign
-            airline: who? airlineName : user?.airline,
+            airline: who ? airlineName : user?.airline,
+            fromUsername: user?.username,
         });
 
         // Reset form immediately
@@ -102,14 +106,14 @@ const MessageDialog = ({
         <UiDialog
             open={open}
             onCancel={onClose}
-            title="Post Message"
+            title={msg ? "Confirm Action" : "Post Message"}
             confirmDisabled={outcome?.status == 'error'}
             onConfirm={handleChange}
             cancelLabel={'Cancel'}
-            confirmLabel={'Send Message'}
+            confirmLabel={msg ? 'Confirm' : 'Send Message'}
             content={
                 <>
-                    <TextField
+                    {!msg && (<TextField
                         label="Message..."
                         type="text"
                         multiline
@@ -124,15 +128,15 @@ const MessageDialog = ({
                                 inputProps: {maxLength: 200, minLength: 5}
                             },
                         }}
-                    />
-                    {isAdmin || isSecurityViolation && (
+                    />)}
+                    {(isAdmin || isSecurityViolation) && (
                         <>
                             <AutocompleteDropdown
                                 label="Department"
                                 data={isSecurityViolation ? [StaffRoles[0]] : StaffRoles}
                                 helperText="Recipient department"
                                 value={to}
-                                disabled={isSecurityViolation && to.length>0}
+                                disabled={isSecurityViolation && to.length > 0}
                                 onChange={clearOutcomeErrorString(setTo, setOutcome)}
                             />
                             {to && (

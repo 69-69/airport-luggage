@@ -48,6 +48,8 @@ const Staffs = () => {
 
         if (proceed && selectedRow?.phone !== null) {
             userService.remove(selectedRow?.phone as string);
+            await userService.removeRemote(selectedRow?.phone as string);
+
             fetchStaffs();
             setConfirm(false); // UI state stays on client
         }

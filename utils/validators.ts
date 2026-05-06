@@ -39,6 +39,19 @@ export const stripAlphabets=(input: string, position?: number) => {
     return match ? match[position ?? 0] : '';
 }
 
+/*AA1234
+↓
+airlineCode: AA
+flightId: 1234
+*/
+export const splitFlightNumber = (input: string) => {
+    const match = input.match(/^([A-Za-z]+)(\d+)$/);
+    return {
+        airlineCode: match?.[1] ?? '',
+        flightId: match?.[2] ?? ''
+    };
+};
+
 // ensureAbbreviation("British Airways")
 // → "BA - British Airways"
 export const ensureAbbreviation = (value: string): string => {

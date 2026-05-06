@@ -3,6 +3,35 @@
 
 export type UserRole = 'ADMIN' | 'AIRLINE' | 'GATE' | 'GROUND' | 'PASSENGER';
 
+/// Status String
+export type FlightStatus = "DEPARTED" | "BOARDING" | "SCHEDULED";
+
+export type PassengerStatus = "NOT_CHECKED_IN" | "CHECKED_IN" | "BOARDED";
+
+export type BagLocation = "CHECKIN_COUNTER" | "SECURITY_CHECK" | "GATE" | "LOADED";
+
+export enum FlightStatusEnum {
+    DEPARTED = "DEPARTED",
+    SCHEDULED = "SCHEDULED",
+    BOARDING = "BOARDING"
+}
+
+// Steven
+
+/// Status Enum
+export enum PassengerStatusEnum {
+    NOT_CHECKED_IN = "NOT_CHECKED_IN",
+    CHECKED_IN = "CHECKED_IN",
+    BOARDED = "BOARDED"
+}
+
+export enum BagLocationEnum {
+    CHECKIN_COUNTER = "CHECKIN_COUNTER",
+    SECURITY_CHECK = "SECURITY_CHECK", // Security violation
+    LOADED = "LOADED", // Means Bag is loaded to the plane/flight
+    GATE = "GATE", // Means Bag is Cleared, no violation
+}
+
 export type User = {
     role: UserRole;
     email: string;
@@ -25,20 +54,12 @@ export type Flight = {
     gate: string;
     departureTime: string;
     tickets: string[];
+    status?: FlightStatus;
 };
 
 export type FlightSnapshot = {
     flightNumber: string;
     ticketNumber: string;
-}
-
-export type PassengerStatus = "NOT_CHECKED_IN" | "CHECKED_IN" | "BOARDED";
-
-
-export enum PassengerStatusEnum {
-    NOT_CHECKED_IN = "NOT_CHECKED_IN",
-    CHECKED_IN = "CHECKED_IN",
-    BOARDED = "BOARDED"
 }
 
 export type Passenger = {
@@ -50,15 +71,6 @@ export type Passenger = {
     flightNumber: string;
     status: PassengerStatus;
 };
-
-export type BagLocation = "CHECKIN_COUNTER" | "SECURITY_CHECK" | "GATE" | "LOADED";
-
-export enum BagLocationEnum {
-    CHECKIN_COUNTER = "CHECKIN_COUNTER",
-    SECURITY_CHECK = "SECURITY_CHECK", // Security violation
-    LOADED = "LOADED", // Means Bag is loaded to the plane/flight
-    GATE = "GATE", // Means Bag is Cleared, no violation
-}
 
 /*| { type: "CHECKIN_COUNTER"; terminal: string; counter: string } // When a passenger checks in a bag
 | { type: "SECURITY_CHECK"; terminal: string; gate: string } // When the bag is at clearance or has violated
@@ -77,6 +89,7 @@ export type MessageBoard = {
     message: string;
     to: string;
     fromRole: UserRole;
+    fromUsername?: string;
     airline?: string;
     timestamp: string; // ISO string
     isRead: boolean;

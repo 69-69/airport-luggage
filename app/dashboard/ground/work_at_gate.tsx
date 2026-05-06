@@ -59,7 +59,7 @@ const WorkAtGateDashboard = ({user}: { user: AuthUser | null }) => {
             setFlight(flight);
 
             const bags: Bag[] = bagService.getAllByTickets(flight.tickets)
-                .filter((b) => b.location === BagLocationEnum.CHECKIN_COUNTER);
+                .filter((b) => b.location === BagLocationEnum.CHECKIN_COUNTER || b.location === BagLocationEnum.GATE);
 
             const mappedRows: BaggageRow[] = bags.map((b) => ({
                 bagId: b.bagId.toString(),
@@ -85,12 +85,13 @@ const WorkAtGateDashboard = ({user}: { user: AuthUser | null }) => {
     useEffect(() => fetchFlights(), []);
 
     /// Load Bags To Plane/Flight
-    const onLoadBagToPlane = (proceed: boolean) => {
+    const onLoadBagToPlane = async (proceed: boolean) => {
         if (!proceed || !selectedRow?.bagId || !selectedRow?.ticket) return;
         console.log('proceed', proceed, selectedRow.bagId || selectedRow.ticket);
 
         // Validation: Ensure passenger is boarded
         const passenger = passengerService.findByTicket(selectedRow.ticket.toString());
+
         if (!passenger || passenger.status !== PassengerStatusEnum.BOARDED) {
             return setOutcome({
                 status: 'error',
@@ -107,7 +108,10 @@ const WorkAtGateDashboard = ({user}: { user: AuthUser | null }) => {
         }
 
         try {
-            bagService.loadToFlight(selectedRow.bagId.toString());
+            const bagId = selectedRow.bagId.toString();
+            bagService.loadToFlight(bagId);
+            await bagService.changeBagLocationRemote(bagId, BagLocationEnum.LOADED);
+
             fetchFlights();
 
             return setOutcome({
@@ -142,25 +146,6 @@ const WorkAtGateDashboard = ({user}: { user: AuthUser | null }) => {
                     setConfirm(true);
                 }}
             />
-
-            {/*
-            Move Bags To Gate Dialog
-            isOpenBoard && (<MoveBagToGateDialog
-                open={isOpenBoard}
-                onClose={() => setShowMoveDialog(false)}
-                onMoveBag={(row: DataRow) => {
-                    setConfirm(true);
-                    setSelectedRow(row);
-                }}
-            />)
-
-            Load Bags To Plane Dialog
-            openChangeGate && (<LoadBagToPlaneDialog
-                open={openChangeGate}
-                onClose={() => setShowLoadDialog(false)}
-                onLoadBag={onLoadBagToPlane}
-            />)
-            */}
 
             {/*Confirm Move Bags To Gate action*/}
             <ConfirmEntityDialog
@@ -208,3 +193,23 @@ export default WorkAtGateDashboard;
                             <Grid size={{xs: 12, md: 3}}>
                             </Grid>
                         </Grid>*/
+
+
+{/*
+            Move Bags To Gate Dialog
+            isOpenBoard && (<MoveBagToGateDialog
+                open={isOpenBoard}
+                onClose={() => setShowMoveDialog(false)}
+                onMoveBag={(row: DataRow) => {
+                    setConfirm(true);
+                    setSelectedRow(row);
+                }}
+            />)
+
+            Load Bags To Plane Dialog
+            openChangeGate && (<LoadBagToPlaneDialog
+                open={openChangeGate}
+                onClose={() => setShowLoadDialog(false)}
+                onLoadBag={onLoadBagToPlane}
+            />)
+            */}

@@ -70,13 +70,13 @@ const CheckInDialog = ({
     };
 
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (ticket.length !== 10 || !isNumeric(ticket)) {
             return setOutcomeHelper('error', 'Something went wrong: Re-verify passenger', setOutcome);
         }
 
         // Check-in Baggage(Bages) and Update Passenger Status
-        const result: CheckInResult = checkinBag(bags);
+        const result: CheckInResult = await checkinBag(bags);
 
         if (result.success) {
             setGetBags(result.bags);

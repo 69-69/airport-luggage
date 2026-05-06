@@ -2,11 +2,9 @@
 
 import React, {useState} from 'react';
 import {Box, Button, TextField, Typography, Paper, Divider, Link} from '@mui/material';
-import { useSearchParams} from 'next/navigation';
-import {dashboardRedirectPath, RoleEnum} from "@/types/userRole";
+import {dashboardRedirectPath} from "@/types/userRole";
 import {useAuth} from "@/actions/authContext";
 import {clearErrorAndSet, isNumeric} from "@/utils/util";
-import {authService} from "@/actions/services/authService";
 import {passengerService} from "@/actions/services/passengerService";
 
 const PassengerLoginForm = () => {
@@ -16,20 +14,21 @@ const PassengerLoginForm = () => {
     const [error, setError] = useState<string | null>(null);
     const [idNumber, setIdNumber] = useState('');
 
-    const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();// redirect after login
 
         if (ticketNumber.length!==10 || !isNumeric(ticketNumber)) {
             setError('Please enter a valid 10 digit ticket number.');
             return;
         }
-        let id = idNumber.trim();
+        const id = idNumber.trim();
         if (id.length !== 6 || !isNumeric(id)) {
             setError('Please enter a valid 6 digit ID number.');
             return;
         }
 
         // Call authService
+        await passengerService.loginRemote(id, ticketNumber);
         const result = passengerService.login(ticketNumber, id);
 
         if (!result.success) {

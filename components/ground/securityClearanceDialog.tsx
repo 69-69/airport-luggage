@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import UiDialog from "@/components/uiDialog";
 import {AutocompleteDropdown} from "@/components/dropdown";
-import {clearErrorAndSetString, clearOutcomeErrorString, OutcomeProps} from "@/utils/util";
+import {clearOutcomeErrorString, OutcomeProps} from "@/utils/util";
 import {passengerService} from "@/actions/services/passengerService";
 import {BagLocationEnum, PassengerStatusEnum, SendResult} from "@/types/models";
 import {bagService} from "@/actions/services/bagService";
@@ -42,12 +42,12 @@ const ClearanceDialog = ({
 
 
     /// Update Bag Location/Status
-    const onUpdateStatus = () => {
+    const onUpdateStatus = async () => {
         if (!selectedRow?.bagId || !selectedRow?.ticket) return;
 
         console.log('proceed', selectedRow.bagId || selectedRow.ticket);
 
-        if(!status || status.length < 3){
+        if (!status || status.length < 3) {
             return setOutcome({status: 'error', message: 'Select the new status of the bag'});
         }
 
@@ -70,12 +70,14 @@ const ClearanceDialog = ({
             }
 
             if (status === 'CLEARED') {
-                bagService.moveTo(selectedRow.bagId.toString(), BagLocationEnum.GATE);
+                const bagId = selectedRow.bagId.toString();
+                bagService.moveTo(bagId, BagLocationEnum.GATE);
+                await bagService.changeBagLocationRemote(bagId, BagLocationEnum.GATE);
 
                 reloadData();
                 return setOutcome({
                     status: 'success',
-                    message: `Bag cleared and moved to Gate ${terminal+'-'+gate?.toUpperCase()}`,
+                    message: `Bag cleared and moved to Gate ${terminal + '-' + gate?.toUpperCase()}`,
                 });
             }
 
@@ -91,7 +93,10 @@ const ClearanceDialog = ({
                 });
             }
 
-            bagService.moveTo(selectedRow.bagId.toString(), BagLocationEnum.SECURITY_CHECK);
+            const bagId = selectedRow.bagId.toString();
+            bagService.moveTo(bagId, BagLocationEnum.SECURITY_CHECK);
+            await bagService.changeBagLocationRemote(bagId, BagLocationEnum.SECURITY_CHECK);
+
             reloadData();
 
             return setOutcome({status: 'success', message: `Bags queued for security checks`,});
@@ -105,11 +110,12 @@ const ClearanceDialog = ({
     }
 
 
-    const handlePostMessage = (row: DataRow) => {
-        const result: SendResult = postMessage(row);
+    const handlePostMessage = async (row: DataRow) => {
+        const result: SendResult = await postMessage(row);
 
         if (result.success) {
             setOutcome({status: 'success', message: 'Security violation reported. Airline staff notified',});
+            setOpenMsgDialog(false);
             console.log("Message sent!");
         } else {
             setOutcome({status: 'error', message: result.error ?? 'Could not sent message'});
@@ -121,36 +127,38 @@ const ClearanceDialog = ({
     return (
         <>
             <UiDialog
-            open={open}
-            onCancel={onClose}
-            title="Security Status"
-            onConfirm={onUpdateStatus}
-            cancelLabel={'Cancel'}
-            confirmDisabled={!status}
-            confirmLabel={'Yes Confirm'}
-            content={
-                <>
-                    <Typography variant="body1" gutterBottom>
-                        Please confirm the change in security status for the bag with ID: <b>{selectedRow?.bagId}.</b>
-                    </Typography>
+                open={open}
+                onCancel={onClose}
+                title="Security Status"
+                onConfirm={onUpdateStatus}
+                cancelLabel={'Cancel'}
+                confirmDisabled={!status}
+                confirmLabel={'Yes Confirm'}
+                content={
+                    <>
+                        <Typography variant="body1" gutterBottom>
+                            Please confirm the change in security status for the bag with
+                            ID: <b>{selectedRow?.bagId}.</b>
+                        </Typography>
 
-                    <AutocompleteDropdown
-                        label="Security Status"
-                        data={[' ', 'SECURITY_VIOLATION', 'SECURITY_CHECK', 'CLEARED']}
-                        value={status}
-                        onChange={clearOutcomeErrorString(setStatus, setOutcome)}
-                    />
+                        <AutocompleteDropdown
+                            label="Security Status"
+                            data={[' ', 'SECURITY_VIOLATION', 'SECURITY_CHECK', 'CLEARED']}
+                            value={status}
+                            onChange={clearOutcomeErrorString(setStatus, setOutcome)}
+                        />
 
-                    {outcome && outcome.status !== undefined && (
-                        <Alert severity={outcome.status}>{outcome.message}</Alert>
-                    )}
-                </>
-            }/>
+                        {outcome && outcome.status !== undefined && (
+                            <Alert severity={outcome.status}>{outcome.message}</Alert>
+                        )}
+                    </>
+                }/>
 
             <MessageDialog
                 open={openMsgDialog}
                 isSecurityViolation={status === 'SECURITY_VIOLATION'}
                 outcome={outcome}
+                msg={`Security violation: Bag ${selectedRow?.bagId} (Ticket ${selectedRow?.ticket}) is associated with flight ${selectedRow?.flight} to ${selectedRow?.destination}.`}
                 setOutcome={setOutcome}
                 onClose={() => setOpenMsgDialog(false)}
                 onPost={handlePostMessage}

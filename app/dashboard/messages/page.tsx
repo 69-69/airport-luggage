@@ -31,16 +31,16 @@ const columns = ["message", "department", "airline", "status", "action"];
 const MessageBoardTable = () => {
     const {user, loading} = useAuth();
 
-    if (loading) return <FullScreenLoader/>
-
-    /*const params = useParams();
-    const flight_id = params?.flight_id as string;*/
-
     const [outcome, setOutcome] = React.useState<OutcomeProps>();
     const [openMsgDialog, setOpenMsgDialog] = React.useState<boolean>(false);
     const [selectedRow, setSelectedRow] = React.useState<MessageRow>();
     const [messages, setMessages] = React.useState<MessageBoard[]>([]);
     const [isConfirm, setConfirm] = React.useState<boolean>(false);
+
+    if (loading) return <FullScreenLoader/>
+
+    /*const params = useParams();
+    const flight_id = params?.flight_id as string;*/
 
 
     // Fetch Messages list
@@ -63,19 +63,21 @@ const MessageBoardTable = () => {
     const handleOnRemove = async (proceed: boolean) => {
 
         if (proceed && selectedRow?.timestamp !== null) {
+            const id = selectedRow?.id as string;
             messageBoardService.remove(
                 {
                     role: selectedRow?.department as UserRole,
-                    id: selectedRow?.id as string
+                    id: id
                 }
             );
+            await messageBoardService.removeRemote(id);
             fetchMessages();
             setConfirm(false); // UI state stays on client
         }
     };
 
-    const handlePostMessage = (row: DataRow) => {
-        const result: SendResult = postMessage(row);
+    const handlePostMessage = async (row: DataRow) => {
+        const result: SendResult = await postMessage(row);
 
         if (result.success) {
             fetchMessages();
@@ -136,13 +138,15 @@ const MessageBoardTable = () => {
                         Post Message
                     </Button>
                 }
-                onStatusCallback={(row) => {
+                onStatusCallback={async (row) => {
                     if (row?.status.toLowerCase() !== 'sent') {
                         const msgRole = row?.department as UserRole;
                         const isRead = !row.isRead as boolean;
                         const id = row.id as string;
+                        // const msg = row.message as string;
 
                         messageBoardService.updateReadStatus({role: msgRole, id: id, isRead: isRead});
+                        await messageBoardService.updateReadStatusRemote({id: id, isRead: isRead});
                         fetchMessages();
                     }
                 }}

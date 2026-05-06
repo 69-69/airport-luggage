@@ -11,12 +11,12 @@ import {Grid} from "@mui/system";
 import {
     clearOutcomeError,
     clearOutcomeErrorString,
-    isNumeric, manualAirlines,
+    manualAirlines,
     manualGates,
     manualTerminals,
     OutcomeProps
 } from "@/utils/util";
-import {ensureAbbreviation, setOutcomeHelper} from "@/utils/validators";
+import {ensureAbbreviation, setOutcomeHelper, splitFlightNumber} from "@/utils/validators";
 import {SendResult} from "@/types/models";
 import {addFlight} from "@/actions/endpoints";
 
@@ -39,28 +39,28 @@ const AddFlightDialog = ({
     const [flightNumber, setFlightNumber] = React.useState('');
     const [terminal, setTerminal] = React.useState('');
     const [gate, setGate] = React.useState('');
-    const [flightId, setFlightId] = React.useState('');
+    // const [flightId, setFlightId] = React.useState('');
     const [departureTime, setDepartureTime] = React.useState('');
 
     // const [error, setOutcome] = React.useState<string | null>(null);
 
-    const handleChange = () => {
+    const handleChange = async () => {
         if (airline.length < 3) {
             return setOutcomeHelper('error', 'Enter a valid airline name', setOutcome);
         }
-        if (!flightId || !isNumeric(flightId)) {
+        /*if (!flightId || !isNumeric(flightId)) {
             return setOutcomeHelper('error', 'Enter a valid flight ID', setOutcome);
         }
         if (flightId.length < 4) {
             return setOutcomeHelper('error', 'Flight ID must be at least 4 characters long.', setOutcome);
-        }
+        }*/
         if (!flightNumber) {
             return setOutcomeHelper('error', 'Flight number is required', setOutcome);
         }
         if (flightNumber.length !== 6) {
             // two letters of Airline code followed by a 4-digit flight number;
             // e.g., DL0245
-            return setOutcomeHelper('error', 'Flight number must be at most 6 characters long.', setOutcome);
+            return setOutcomeHelper('error', 'Flight number must be exactly 6 characters long.', setOutcome);
         }
         // Letters at start + exactly 4 digits
         const flightRegex = /^[A-Za-z]+\d{4}$/;
@@ -82,7 +82,8 @@ const AddFlightDialog = ({
 
         setOutcomeHelper('success', 'Flight added successfully!', setOutcome); // If everything is valid, set success message
 
-        const result: SendResult = addFlight({
+        const {flightId} = splitFlightNumber(flightNumber);
+        const data = {
             airlineName: ensureAbbreviation(airline), // E.g: → "BA - British Airways"
             destination: destination,
             flightId: flightId,
@@ -90,7 +91,11 @@ const AddFlightDialog = ({
             gate: gate,
             terminal: terminal,
             departureTime: new Date(departureTime).toISOString(),
-        });
+        };
+
+        const result: SendResult = await addFlight(data);
+        // const res = await flightService.addRemote(data);
+        // console.log('steve', res);
 
         if (result.success) {
             setOutcome({status: 'success', message: 'Flight added successfully',});
@@ -110,7 +115,7 @@ const AddFlightDialog = ({
         setAirline('');
         setDestination('');
         setFlightNumber('');
-        setFlightId('');
+        // setFlightId('');
         setGate('');
         setTerminal('');
         setDepartureTime('');
@@ -129,7 +134,13 @@ const AddFlightDialog = ({
             title="Add Flight"
             onConfirm={handleChange}
             cancelLabel={'Cancel'}
-            confirmDisabled={!airline || !flightId || !flightNumber || !gate || !terminal}
+            confirmDisabled={
+                !airline ||
+                !flightNumber ||
+                !gate ||
+                !terminal ||
+                !departureTime
+            }
             confirmLabel={'Add'}
             content={
                 <>
@@ -153,7 +164,7 @@ const AddFlightDialog = ({
                     />
 
                     <Grid container spacing={2}>
-                        <Grid size={{xs: 12, md: 6}}>
+                        {/*<Grid size={{xs: 12, md: 6}}>
                             <TextField
                                 label="Flight ID"
                                 type="text"
@@ -170,8 +181,8 @@ const AddFlightDialog = ({
                                     },
                                 }}
                             />
-                        </Grid>
-                        <Grid size={{xs: 12, md: 6}}>
+                        </Grid>*/}
+                        <Grid size={{xs: 12, md: 12}}>
                             <TextField
                                 label="Flight Number"
                                 type="text"

@@ -62,7 +62,7 @@ const ConfirmDepartureDialog = ({
         }
     }, [flight]);
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!flight?.flightNumber || !user) return;
 
         const {unboardedCount, allBoarded, allBagsLoaded} = getFlightStatus(flight);
@@ -75,15 +75,21 @@ const ConfirmDepartureDialog = ({
         if (!allBagsLoaded) return setOutcomeHelper('error', "Not all bags are loaded", setOutcome);
 
         // Notify Admin via MessageBoard
-        messageBoardService.post({
+        const alertMsg = {
             role: user?.role,
             msg: {
                 message: `Departure Notice:\nFlight ${flight.flightNumber} is ready for departure.`,
                 to: RoleEnum.ADMIN as UserRole,
                 fromRole: user?.role,
                 airline: user?.airline,
+                fromUsername: user?.username
             } as MessageBoard
-        });
+        };
+
+        // Remote
+        const res = await messageBoardService.postRemote(alertMsg);
+        // Local
+        messageBoardService.post({...alertMsg, serverId: res.id});
 
         setOutcomeHelper('success', "Administrator has been notified. Awaiting approval", setOutcome);
     };

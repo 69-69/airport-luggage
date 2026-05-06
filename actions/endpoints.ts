@@ -38,10 +38,12 @@ export const addStaff = async (row: DataRow): Promise<SendResult> => {
 
         // 1. Add staff locally
         try {
-            userService.add({
+            const user = userService.add({
                 ...userData,
                 phone: phone as string,
             });
+
+            await userService.addRemote({...user, password, username});
         } catch (addError) {
             return {
                 success: false,
@@ -71,7 +73,7 @@ export const addStaff = async (row: DataRow): Promise<SendResult> => {
 
 
 // Flight
-export function addFlight(data: DataRow): SendResult {
+export async function addFlight(data: DataRow): Promise<SendResult> {
     try {
         const {airlineName, destination, flightId, flightNumber, terminal, gate, departureTime} = data;
 
@@ -81,7 +83,7 @@ export function addFlight(data: DataRow): SendResult {
 
         // 1. Add staff locally
         try {
-            flightService.add({
+            const flight = {
                 gate: gate as string,
                 terminal: terminal as string,
                 airlineName: airlineName as string,
@@ -89,7 +91,9 @@ export function addFlight(data: DataRow): SendResult {
                 flightId: flightId as string,
                 flightNumber: flightNumber as string,
                 departureTime: departureTime as string
-            });
+            };
+            flightService.add(flight);
+            await flightService.addRemote(flight);
         } catch (addError) {
             return {
                 success: false,
@@ -108,7 +112,7 @@ export function addFlight(data: DataRow): SendResult {
 }
 
 // Bags
-export function checkinBag(bags: Bag[]): CheckInResult {
+export async function checkinBag(bags: Bag[]): Promise<CheckInResult> {
     try {
         if (!bags || !bags.length) {
             return {success: false, error: 'All fields are required'};
@@ -117,6 +121,7 @@ export function checkinBag(bags: Bag[]): CheckInResult {
         // 1. Add staff locally
         try {
             const data = bagService.add(bags);
+            await bagService.addRemote(data);
             return {success: true, bags: data};
         } catch (addError) {
             return {
@@ -134,7 +139,7 @@ export function checkinBag(bags: Bag[]): CheckInResult {
 }
 
 // Passenger
-export function addPassenger(data: DataRow): SendResult {
+export async function addPassenger(data: DataRow): Promise<SendResult> {
     try {
         const {firstName, lastName, idNumber, ticketNumber, flightNumber} = data;
 
@@ -144,14 +149,18 @@ export function addPassenger(data: DataRow): SendResult {
 
         // 1. Add staff locally
         try {
-            passengerService.add({
+            const passenger = {
                 role: RoleEnum.PASSENGER,
                 firstName: firstName as string,
                 lastName: lastName as string,
                 idNumber: idNumber as string,
                 ticketNumber: ticketNumber as string,
                 flightNumber: flightNumber as string
-            });
+            };
+
+            passengerService.add(passenger);
+            await passengerService.addRemote(passenger);
+
         } catch (addError) {
             return {
                 success: false,
@@ -194,26 +203,36 @@ export function verifyPassenger(
 }
 
 // Message Board
-export function postMessage(data: DataRow): SendResult {
+export async function postMessage(data: DataRow): Promise<SendResult> {
     try {
         // ROLE act as recipient
-        const {message, to, airline, fromRole} = data;
+        const {message, to, airline, fromRole, fromUsername} = data;
 
-        if (!message || !to || !fromRole) {
+        if (!message || !to || !fromRole || !fromUsername) {
             return {success: false, error: 'All fields are required'};
         }
 
         // 1. Post message
         try {
-            messageBoardService.post({
+            const alertMsg = {
                 role: to as UserRole,
                 msg: {
                     message,
                     to,
                     fromRole,
                     airline,
+                    fromUsername,
                 } as MessageBoard
-            });
+            };
+
+            // Remote
+            const res = await messageBoardService.postRemote(alertMsg);
+
+            console.log('server-Id', res.id);
+            // Local
+            messageBoardService.post({...alertMsg, serverId: res.id});
+
+
         } catch (addError) {
             return {
                 success: false,

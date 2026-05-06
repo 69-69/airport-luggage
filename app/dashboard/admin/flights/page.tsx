@@ -24,15 +24,17 @@ interface FlightRow extends DataRow {
     departure: string;
     passengers: number;
     status: string;
-    action: string;
+    view: string;
+    manage: string;
 }
 
-const columns = ["flight", "airline", "terminal", "gate", "destination", "departure", "passengers", "status", "action"];
+const columns = ["flight", "airline", "terminal", "gate", "destination", "departure", "passengers", "status", "view", "manage"];
 
 const Flights = () => {
     const router = useRouter();
     const [error, setError] = React.useState('');
     // const [outcome, setOutcome] = React.useState<OutcomeProps>();
+    const [isConfirmRemoval, setConfirmRemoval] = React.useState(false);
     const [isConfirm, setConfirm] = React.useState(false);
     const [selectedRow, setSelectedRow] = React.useState<DataRow>();
     const [isAdd, setIsAdd] = React.useState(false);
@@ -51,10 +53,31 @@ const Flights = () => {
     // Initial fetch
     useEffect(() => fetchFlights(), []);
 
-    const handleOnRemove = (proceed: boolean) => {
+    const handleOnRemove = async (proceed: boolean) => {
         try {
             if (proceed && selectedRow?.flight !== null) {
-                flightService.remove(selectedRow?.flight as string);
+                await flightService.remove(selectedRow?.flight as string);
+
+                // Refresh flight list after removal
+                fetchFlights();
+
+                // Close confirmation UI
+                setConfirmRemoval(false);
+            }
+        } catch (err: unknown) {
+            // Safely extract error message
+            const message = err instanceof Error ? err.message : String(err);
+            setError(message);
+            console.error("Failed to remove flight:", err);
+        }
+    };
+
+    // update flight status as Departed
+    const handleFlightStatusUpdate = async (proceed: boolean) => {
+        try {
+            if (proceed && selectedRow?.flight !== null) {
+                flightService.updateStatus(selectedRow?.flight as string);
+                await flightService.updateStatusRemote(selectedRow?.flight as string);
 
                 // Refresh flight list after removal
                 fetchFlights();
@@ -66,7 +89,7 @@ const Flights = () => {
             // Safely extract error message
             const message = err instanceof Error ? err.message : String(err);
             setError(message);
-            console.error("Failed to remove flight:", err);
+            console.error("Failed to update flight status:", err);
         }
     };
 
@@ -83,8 +106,9 @@ const Flights = () => {
                     destination: toTitleCase(f?.destination),
                     departure: formatTime(f?.departureTime),
                     passengers: f?.tickets.length ?? 0,
-                    status: "Manifest",
-                    action: "Remove",
+                    status: f.status as string,
+                    view: "Manifest",
+                    manage: "Manage Flight",
                 }))}
                 title="Flight Management"
                 topButton={
@@ -92,7 +116,7 @@ const Flights = () => {
                         Add Flight
                     </Button>
                 }
-                onStatusCallback={(row: FlightRow) => router.push(`/dashboard/airline/${row.flight}`)}
+                onOptCallback={(row: FlightRow) => router.push(`/dashboard/airline/${row.flight}`)}
                 onActionCallback={(row: FlightRow) => {
                     console.log('flight--Number', row.flight);
                     setSelectedRow(row);
@@ -110,10 +134,35 @@ const Flights = () => {
                 // onAddFlight={handleAddFlight}
             />)}
 
-            {/*Confirm Flight removal Dialog*/}
+            {/*Choose either to update Flight Status or Remove it*/}
             <ConfirmEntityDialog
                 open={isConfirm}
-                onClose={() => setConfirm(false)}
+                optionLabel="Remove Flight"
+                confirmLabel="Mark as Departed"
+                onOption={() => {
+                    setConfirm(false);
+                    setConfirmRemoval(true);
+                }}
+                onClose={() => {
+                    setConfirm(false);
+                    setConfirmRemoval(false);
+                }}
+                title="Manage Flight"
+                dataId={selectedRow?.flight as string}
+                errored={error}
+                message={
+                    <>
+                        Do you want to mark flight <b>{selectedRow?.flight}</b> as <b>Departed</b> or remove it from the
+                        system?
+                    </>
+                }
+                onConfirm={handleFlightStatusUpdate}
+            />
+
+            {/*Confirm Flight removal Dialog*/}
+            <ConfirmEntityDialog
+                open={isConfirmRemoval}
+                onClose={() => setConfirmRemoval(false)}
                 title="Remove Flight"
                 dataId={selectedRow?.flight as string}
                 errored={error}

@@ -19,6 +19,9 @@ import {passengerService} from "@/actions/services/passengerService";
 interface VerifyPassengerDialogProps {
     open: boolean;
     onClose: () => void;
+    ticket: string | null;
+    idNo: string | null;
+    fullName: string | null;
     onProceedToCheckIn: (ticket: string, flight: string) => void;
     // onVerifyPassenger: (row: DataRow) => void;
 }
@@ -28,6 +31,9 @@ const _airlineName = (flight: string) => getAirlineByCode(stripAlphabets(flight)
 const VerifyPassengerDialog = ({
                                    open,
                                    onClose,
+                                   ticket,
+                                   idNo,
+                                   fullName,
                                    onProceedToCheckIn,
                                    // onVerifyPassenger,
                                }: VerifyPassengerDialogProps) => {
@@ -38,7 +44,8 @@ const VerifyPassengerDialog = ({
     const [passenger, setPassenger] = React.useState<Passenger>();
     // const [error, setError] = React.useState<string | null>(null);
 
-    const handleVerification = () => {
+
+    const handleVerification = async () => {
 
         if (!isNumeric(ticketNumber)) {
             return setOutcomeHelper('error', 'Enter a valid ticket number', setOutcome);
@@ -64,6 +71,7 @@ const VerifyPassengerDialog = ({
 
         if (result.success) {
             passengerService.checkIn(ticketNumber); // Update Passenger Status as "CHECKED_IN"
+            await passengerService.checkInRemote(ticketNumber); // Update Passenger Status as "CHECKED_IN"
             setPassenger(result.passenger);
             // setOutcome({status: 'success', message: 'Passenger verified. You may proceed with baggage check-in.',});
             setOutcomeHelper('success', 'Passenger verified. You may proceed with baggage check-in.', setOutcome);
@@ -76,6 +84,15 @@ const VerifyPassengerDialog = ({
         // Reset form immediately
         // resetForm();
     };
+
+    React.useEffect(() => {
+        if (open) {
+            setIdNumber(idNo ?? '');
+            setTicketNumber(ticket ?? '');
+            setPassenger(undefined);
+            setOutcome(undefined);
+        }
+    }, [open, ticket, idNo]);
 
     /*const resetForm = () => {
         // Reset form when dialog is closed
@@ -99,8 +116,8 @@ const VerifyPassengerDialog = ({
             onOption={handleVerification}
             confirmLabel='Proceed to Check-in'
             confirmDisabled={!passenger}
-            onConfirm={()=>{
-                if(passenger){
+            onConfirm={() => {
+                if (passenger) {
                     onProceedToCheckIn(ticketNumber, passenger?.flightNumber ?? '');
                 }
             }}
@@ -114,17 +131,21 @@ const VerifyPassengerDialog = ({
                             <b>Flight:</b> {passenger?.flightNumber.toUpperCase()}<br/>
                         </Alert>
                     ) : (
-                        <Alert severity="warning" sx={{mt: 2}}>
-                            Passenger must be verified before check-in.
-                            Enter required fields to "Verify" to proceed!
-                        </Alert>)
-                    }
+                        <>
+                            <Alert severity="warning" sx={{mt: 2}}>
+                                Passenger must be verified before check-in.
+                                Click on verify to proceed!
+                            </Alert>
+                            <span><b>Verify:</b> {fullName}</span>
+                        </>
+                    )}
                     <TextField
                         label="Ticket Number"
                         type="text"
                         fullWidth
                         size="small"
                         value={ticketNumber}
+                        disabled={!!ticket || !!ticketNumber}
                         onChange={clearOutcomeError(setTicketNumber, setOutcome)}
                         slotProps={{
                             input: {
@@ -140,6 +161,7 @@ const VerifyPassengerDialog = ({
                         fullWidth
                         size="small"
                         value={idNumber}
+                        disabled={!!idNo || !!idNumber}
                         onChange={clearOutcomeError(setIdNumber, setOutcome)}
                         slotProps={{
                             input: {
