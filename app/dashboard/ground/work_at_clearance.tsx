@@ -46,9 +46,10 @@ const WorkAtClearanceDashboard = ({user}: { user: AuthUser | null }) => {
             const flights: Flight[] = flightService.getAll();
 
             // Ground staff only restricted by gate (NOT airline)
-            const gateFlights = flights.filter(
+            const gateFlights = flights;
+            /*const gateFlights = flights.filter(
                 (f: Flight) => f.airlineName === user.airline
-            );
+            );*/
 
             if (!gateFlights.length) {
                 setRows([]);
