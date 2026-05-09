@@ -15,8 +15,8 @@ const storageService = {
     set<T>(key: string, value: T, remember?: boolean) {
         if (typeof window === 'undefined') return;
 
-        const storage = remember ? localStorage : sessionStorage;
-        storage.setItem(key, JSON.stringify(value));
+        // const storage = remember ? localStorage : sessionStorage;
+        localStorage.setItem(key, JSON.stringify(value));
     },
 
     remove(key: string) {
